@@ -15,8 +15,9 @@ type MultiFileLogWriter struct {
 	Daily   bool  `json:"daily"`
 	Maxdays int64 `json:"maxdays"`
 
-	Rotate bool `json:"rotate"`
-	Level  int  `json:"level"`
+	Rotate    bool   `json:"rotate"`
+	Level     int    `json:"level"`
+	LevelName string `json:"levelname"`
 
 	LevelFiles []*struct {
 		LevelName string `json:"levelname"`
@@ -44,6 +45,12 @@ func (w *MultiFileLogWriter) Init(jsonconfig string) error {
 	err := json.Unmarshal([]byte(jsonconfig), w)
 	if err != nil {
 		return err
+	}
+	if len(w.LevelName) > 0 {
+		tmp, err := logLevelName2Int(w.LevelName)
+		if err == nil {
+			w.Level = tmp
+		}
 	}
 	if len(w.LevelFiles) == 0 {
 		return fmt.Errorf("levelfiles is empty")
@@ -88,6 +95,9 @@ func (w *MultiFileLogWriter) initInnerLoggers() error {
 }
 
 func (w *MultiFileLogWriter) WriteMsg(msg string, level int) error {
+	if level > w.Level {
+		return nil
+	}
 	logger, exist := w.levelLoggerMap[level]
 	if !exist {
 		return nil
