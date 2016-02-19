@@ -2,6 +2,7 @@ package logs
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"testing"
 
@@ -34,7 +35,7 @@ func TestFile2(t *testing.T) {
 	}
 
 	log.Debug("debug msg")
-	b, err := exists(debugFileName)
+	b, err := hasContent(debugFileName)
 	if !b || err != nil {
 		t.Fatalf("log file[%s] doesn't exist", debugFileName)
 	}
@@ -65,7 +66,7 @@ func TestFile3(t *testing.T) {
 
 	log.Debug("debug msg")
 	{
-		b, err := exists(debugFileName)
+		b, err := hasContent(debugFileName)
 		if !b || err != nil {
 			t.Fatalf("log file[%s] doesn't exist", debugFileName)
 		}
@@ -73,20 +74,64 @@ func TestFile3(t *testing.T) {
 
 	log.Info("info msg")
 	{
-		b, err := exists(infoFileName)
+		b, err := hasContent(infoFileName)
 		if !b || err != nil {
 			t.Fatalf("log file[%s] doesn't exist", infoFileName)
 		}
 	}
 }
 
-func exists(path string) (bool, error) {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true, nil
+func TestFile4(t *testing.T) {
+	debugFileName := "test_file4.debug.log"
+	infoFileName := "test_file4.info.log"
+	os.Remove(debugFileName)
+	os.Remove(infoFileName)
+	defer os.Remove(debugFileName)
+	defer os.Remove(infoFileName)
+
+	log := BeegoLogs.NewLogger(10000)
+	err := log.SetLogger("multi_file", fmt.Sprintf(
+		`{
+			"levelname": "info",
+			"levelfiles": [{
+				"levelname": "debug",
+				"filename": "%s"
+			},{
+				"levelname": "info",
+				"filename": "%s"
+			}]
+		}`, debugFileName, infoFileName))
+	if err != nil {
+		t.Fatal(err)
 	}
-	if os.IsNotExist(err) {
-		return false, nil
+
+	log.Debug("debug msg")
+	{
+		b, err := hasContent(debugFileName)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if b {
+			t.Fatalf("log file[%s] should not have content", debugFileName)
+		}
 	}
-	return false, err
+
+	log.Info("info msg")
+	{
+		b, err := hasContent(infoFileName)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !b {
+			t.Fatalf("log file[%s] should have content", infoFileName)
+		}
+	}
+}
+
+func hasContent(path string) (bool, error) {
+	contentBytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		return false, err
+	}
+	return len(contentBytes) > 0, nil
 }
