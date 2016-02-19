@@ -58,6 +58,8 @@ func (w *MultiFileLogWriter) Init(jsonconfig string) error {
 		}
 	}
 
+	w.initInnerLoggers()
+
 	return nil
 }
 
