@@ -18,7 +18,7 @@ func logLevelName2Int(levelName string) (logLevel int, err error) {
 		logLevel = BeegoLogs.LevelCritical
 	case "error":
 		logLevel = BeegoLogs.LevelError
-	case "warnning":
+	case "warning", "warn":
 		logLevel = BeegoLogs.LevelWarning
 	case "notice":
 		logLevel = BeegoLogs.LevelNotice
