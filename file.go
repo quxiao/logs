@@ -20,9 +20,9 @@ type MultiFileLogWriter struct {
 	LevelName string `json:"levelname"`
 
 	LevelFiles []*struct {
-		LevelName string `json:"levelname"`
-		Level     int
-		FileName  string `json:"filename"`
+		LevelNames []string `json:"levelnames"`
+		Levels     []int
+		FileName   string `json:"filename"`
 	} `json:"levelfiles"`
 
 	levelLoggerMap map[int]BeegoLogs.LoggerInterface
@@ -55,13 +55,20 @@ func (w *MultiFileLogWriter) Init(jsonconfig string) error {
 	if len(w.LevelFiles) == 0 {
 		return fmt.Errorf("levelfiles is empty")
 	}
-	for _, levelFileConfig := range w.LevelFiles {
-		if len(levelFileConfig.FileName) == 0 {
+	for _, l := range w.LevelFiles {
+		if len(l.FileName) == 0 {
 			return fmt.Errorf("filename in levelfiles is empty")
 		}
-		levelFileConfig.Level, err = logLevelName2Int(levelFileConfig.LevelName)
-		if err != nil {
-			return err
+		if len(l.LevelNames) == 0 {
+			return fmt.Errorf("levelnames for file[%s] is empty", l.FileName)
+		}
+		l.Levels = make([]int, 0, len(l.LevelNames))
+		for _, levelName := range l.LevelNames {
+			level, err := logLevelName2Int(levelName)
+			if err != nil {
+				return err
+			}
+			l.Levels = append(l.Levels, level)
 		}
 	}
 
@@ -82,13 +89,15 @@ func (w *MultiFileLogWriter) initInnerLoggers() error {
 			"rotate": %v,
 			"level": %d
 		}
-		`, l.FileName, w.Maxlines, w.Maxsize, w.Daily, w.Maxdays, w.Rotate, l.Level)
+		`, l.FileName, w.Maxlines, w.Maxsize, w.Daily, w.Maxdays, w.Rotate, BeegoLogs.LevelDebug /*use highest log level*/)
 		innerLogger := BeegoLogs.NewFileWriter()
 		err := innerLogger.Init(config)
 		if err != nil {
 			return err
 		}
-		w.levelLoggerMap[l.Level] = innerLogger
+		for _, level := range l.Levels {
+			w.levelLoggerMap[level] = innerLogger
+		}
 	}
 
 	return nil

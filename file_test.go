@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 
 	BeegoLogs "github.com/astaxie/beego/logs"
@@ -26,7 +27,7 @@ func TestFile2(t *testing.T) {
 	err := log.SetLogger("multi_file", fmt.Sprintf(
 		`{
 			"levelfiles": [{
-				"levelname": "debug",
+				"levelnames": ["debug"],
 				"filename": "%s"
 			}]
 		}`, debugFileName))
@@ -53,10 +54,10 @@ func TestFile3(t *testing.T) {
 	err := log.SetLogger("multi_file", fmt.Sprintf(
 		`{
 			"levelfiles": [{
-				"levelname": "debug",
+				"levelnames": ["debug", "trace"],
 				"filename": "%s"
 			},{
-				"levelname": "info",
+				"levelnames": ["info"],
 				"filename": "%s"
 			}]
 		}`, debugFileName, infoFileName))
@@ -65,10 +66,20 @@ func TestFile3(t *testing.T) {
 	}
 
 	log.Debug("debug msg")
+	log.Trace("trace msg")
 	{
 		b, err := hasContent(debugFileName)
 		if !b || err != nil {
 			t.Fatalf("log file[%s] doesn't exist", debugFileName)
+		}
+	}
+	{
+		lineNum, err := getFileLineNum(debugFileName)
+		if err != nil {
+			t.Fatalf("log file[%s] get lines err: %v", debugFileName, err)
+		}
+		if lineNum != 2 {
+			t.Fatalf("log file[%s] line number[%d] should be 2", debugFileName, lineNum)
 		}
 	}
 
@@ -94,10 +105,10 @@ func TestFile4(t *testing.T) {
 		`{
 			"levelname": "info",
 			"levelfiles": [{
-				"levelname": "debug",
+				"levelnames": ["debug"],
 				"filename": "%s"
 			},{
-				"levelname": "info",
+				"levelnames": ["info"],
 				"filename": "%s"
 			}]
 		}`, debugFileName, infoFileName))
@@ -134,4 +145,12 @@ func hasContent(path string) (bool, error) {
 		return false, err
 	}
 	return len(contentBytes) > 0, nil
+}
+
+func getFileLineNum(path string) (int, error) {
+	contentBytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		return 0, err
+	}
+	return len(strings.Split(string(contentBytes), "\n")) - 1, nil
 }

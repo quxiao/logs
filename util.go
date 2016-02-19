@@ -26,6 +26,8 @@ func logLevelName2Int(levelName string) (logLevel int, err error) {
 		logLevel = BeegoLogs.LevelInformational
 	case "debug":
 		logLevel = BeegoLogs.LevelDebug
+	case "trace":
+		logLevel = BeegoLogs.LevelTrace
 	default:
 		err = fmt.Errorf("level name[%s] is invalid", levelName)
 	}
